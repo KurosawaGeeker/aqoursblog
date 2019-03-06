@@ -26,6 +26,4 @@ def index():
     return redirect(url_for('index'))
   return render_template('index.html',form = form,cn = session.get('cn'),mana = session.get('mana'),known = session.get('known', False),current_time=datetime.utcnow())
 
-@auth.route('/login')
-def login():
-    return render_template('auth/login.html')
+

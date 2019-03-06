@@ -15,9 +15,11 @@ import flask_shell
 import pymysql
 import os
 from app.models import User,Role
+import config
 basedir = os.path.abspath(os.path.dirname(__file__))
 app = create_app()
 manager = Manager(app)
+DEBUG = False
 
 migrate = Migrate(app,db)
 manager.add_command('db',MigrateCommand)
@@ -39,7 +41,6 @@ manager.add_command('db',MigrateCommand)
   msg.body = render_template(template + '.txt', **kwargs)
   msg.html = render_template(template + '.html', **kwargs)
   mail.send(msg) """
-@
 
 if __name__ == '__main__':
     #app.run(host='localhost', port=5000)
