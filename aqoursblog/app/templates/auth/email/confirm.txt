@@ -1,0 +1,13 @@
+亲爱的 {{ user.cn }},
+
+欢迎来到楚水应援团
+
+为了验证你的账户，请戳以下链接：
+
+{{ url_for('auth.confirm',token=token,_external=True) }}
+
+感谢您的光临
+
+黑泽克，敬上
+
+注意：请不要回复这封邮件。

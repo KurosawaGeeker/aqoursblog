@@ -18,7 +18,7 @@ def create_app(): #工厂函数
     app = Flask(__name__)
     #配置模块
     dir_path = os.path.abspath(os.path.dirname(__file__))
-    app.config.from_pyfile('../config.py')
+    app.config.from_pyfile('../config.py')  #从config当中获取环境变量
     #config[config_name].init_app(app)
     #模型扩展初始化
     bootstrap.init_app(app)
