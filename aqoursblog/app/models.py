@@ -4,8 +4,9 @@ from flask_login import UserMixin,login_required,AnonymousUserMixin,current_user
 from werkzeug.security import generate_password_hash,check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer #太长了，利用as可以代替对象名
 from . import config 
-from flask import current_app
-import datetime
+from flask import current_app,request
+from datetime import datetime
+import hashlib
 class Role(db.Model):
     __tablename__ = 'roles'
     id = db.Column(db.Integer,primary_key=True)
@@ -47,7 +48,7 @@ class User(UserMixin,db.Model): #UserMixin作用详情见P82
     email = db.Column(db.String(64),unique=True,index=True)
     role_id = db.Column(db.Integer,db.ForeignKey('roles.id'))
     password_hash = db.Column(db.String(128))
-    confirmed = db.Column(db.Boolean,default=False)
+    #confirmed = db.Column(db.Boolean,default=False)暂时有问题，去掉
     location = db.Column(db.String(64))
     about_me = db.Column(db.Text())
     member_since = db.Column(db.DateTime(), default=datetime.utcnow)
@@ -65,18 +66,28 @@ class User(UserMixin,db.Model): #UserMixin作用详情见P82
     def password(self):
         raise AttributeError('not readable')
 
-    def generate_confirmation_token(self, expiration=3600): 
+"""     def generate_confirmation_token(self, expiration=3600): 
         s = Serializer(current_app.config['SECRET_KEY'], expiration)
-        return s.dumps({'confirm': self.id})
+        return s.dumps({'confirm': self.id}) """
+
+    def gravatar(self,size=100,default='idention',rating='g'):
+        defalut='idention'
+        if request.is_secure:
+            url = 'https://secure.gravatar.com/avatar'
+        else:
+            url =  'http://www.gravatar.com/avatar'
+        hash = hashlib.md5(self.email.encode('utf-8')).hexdigest()
+        return '{url}/{hash}?s={size}&d={default}&r={rating}'.format(url=url, hash=hash, size=size, default=default, rating=rating)
 
 
     @password.setter
     def password(self,password):
         self.password_hash = generate_password_hash(password)
+
     def verify_password(self,password): #判断输入密码是否一致，同一个字符串转化为的散列是一样的
         return check_password_hash(self.password_hash,password)
         
-    def confirm(self,token): #用户邮箱验证函数
+"""     def confirm(self,token): #用户邮箱验证函数
         s = Serializer(current_app.config['SECRET_KEY'])
         try:
             data = s.load(token)
@@ -86,7 +97,7 @@ class User(UserMixin,db.Model): #UserMixin作用详情见P82
             return False
         self.confirmed = True
         db.session.add(self)
-        return True 
+        return True  """
     def can(sefl,permissions):
         return self.role is not None and (self.role.permissions & permissions) == permissions
 
@@ -94,9 +105,22 @@ class User(UserMixin,db.Model): #UserMixin作用详情见P82
         return self.can(Permission.ADMINISTER)
 
     def ping(self):
-        self.last_seen = datetime.utcow()
+        self.last_seen = datetime.utcnow()
         db.session.add(self)
-
+    @staticmethod
+    def generate_fake(count=100):
+        from sqlalchemy.exc import IntegrityError
+        from random import seed 
+        import forgery_py
+        seed()
+        for i in range(count):
+            u = User(email=forgery_py.internet.email_address(),cn=forgery_py.internet.user_name(True),password=forgery_py.lorem_ipsum.word(),mana=forgery_py.name.full_name(),
+location=forgery_py.address.city(),about_me=forgery_py.lorem_ipsum.sentence(),member_since=forgery_py.date.date(True))
+            db.session.add(u)
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()#回滚防止坏档
     def __repr__(self):
         return '<User %r>' % self.cn
 class AnonymousUser(AnonymousUserMixin): #匿名用户没有任何权限
@@ -109,9 +133,21 @@ class AnonymousUser(AnonymousUserMixin): #匿名用户没有任何权限
 class Post(db.Model): #文章的模型
     __tablename__ = 'posts'
     id = db.Column(db.Integer, primary_key=True)
-    body = db.Column(db.text)
+    body = db.Column(db.Text)
     timestamp = db.Column(db.DateTime,index=True,default=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    @staticmethod
+    def generate_fake(count=100):
+        from random import seed, randint
+        import forgery_py
+        
+        seed()
+        user_count = User.query.count()
+        for i in range(count):
+            u = User.query.offset(randint(0,user_count - 1)).first()
+            p = Post(body=forgery_py.lorem_ipsum.sentences(randint(1, 3)),timestamp=forgery_py.date.date(True),author=u)
+            db.session.add(p)
+            db.session.commit()
 
 login_manager.anonymous_user = AnonymousUser
 

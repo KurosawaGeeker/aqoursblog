@@ -1,14 +1,14 @@
 from datetime import datetime
 from flask import render_template,session,redirect,url_for,abort
 from . import main
-from forms import NameForm
-from forms import EditProfileForm
-from forms import PostForm
+from .forms import NameForm
+from .forms import EditProfileForm
+from .forms import PostForm
 from .. import db
 from ..models import User,Role,Permission,Post
 from .. import auth
-from flask_login import current_user
-@main.route('/', methods=['GET', 'POST'])
+from flask_login import current_user,login_required
+""" @main.route('/', methods=['GET', 'POST'])
 def index():
   form = NameForm()
   if form.validate_on_submit():
@@ -27,7 +27,7 @@ def index():
     form.mana.data = ''
     return redirect(url_for('main.index'))
   return render_template('index.html',form = form,cn = session.get('cn'),mana = session.get('mana'),known = session.get('known', False),current_time=datetime.utcnow())
-
+ """
 @main.route('/user/<cn>')
 def user(cn):
   user = User.query.filter_by(cn = cn).first()
@@ -35,7 +35,7 @@ def user(cn):
     abort(404)
   return render_template('user.html',user=user)
 
-@main.route('/edit-profile', methods=['GET', 'POST'])
+@main.route('/edit-profile', methods=['GET', 'POST']) #用户编辑资料界面
 @login_required
 def edit_profile():
   form = EditProfileForm()
@@ -51,11 +51,12 @@ def edit_profile():
   form.about_me.data = current_user.about_me
   return render_template('edit_profile.html', form=form)
 
-@main.route('/', methods=['GET', 'POST'])
+@main.route('/', methods=['GET', 'POST']) 
 def index():
   form = PostForm()
   if current_user.can(Permission.WRITE_ARTICLES) and form.validate_on_submit(): #如果当前用户拥有写文章权限的话
     post = Post(body=form.body.data,author=current_user._get_current_object()) #实例化
     db.session.add(post)
     return redirect(url_for('.index'))
-  posts = Post.query.order_by(Post.time)
+  posts = Post.query.order_by(Post.timestamp.desc()).all()  #完整的博客文章列表传给 以时间戳进行降序排序
+  return render_template('index.html',form = form,posts = posts,current_user=current_user)
