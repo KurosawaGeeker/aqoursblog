@@ -11,7 +11,7 @@ from flask_migrate import Migrate,MigrateCommand
 from flask_mail import Mail
 from app import create_app,db
 from flask_login import login_required
-import flask_shell
+
 import pymysql
 import os
 from app.models import User,Role,Post

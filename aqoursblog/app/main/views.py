@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import render_template,session,redirect,url_for,abort
+from flask import render_template,session,redirect,url_for,abort,flash
 from . import main
 from .forms import NameForm
 from .forms import EditProfileForm
@@ -33,7 +33,8 @@ def user(cn):
   user = User.query.filter_by(cn = cn).first()
   if user is None:
     abort(404)
-  return render_template('user.html',user=user)
+  posts = user.posts.order_by(Post.timestamp.desc()).all()
+  return render_template('user.html',user=user,posts = posts)
 
 @main.route('/edit-profile', methods=['GET', 'POST']) #用户编辑资料界面
 @login_required
@@ -54,9 +55,14 @@ def edit_profile():
 @main.route('/', methods=['GET', 'POST']) 
 def index():
   form = PostForm()
-  if current_user.can(Permission.WRITE_ARTICLES) and form.validate_on_submit(): #如果当前用户拥有写文章权限的话
+  currentuser = current_user
+  if current_user.can(Permission.WRITE_ARTICLES) and form.validate_on_submit(): #如果当前用户拥有写文章权限的话and form.validate_on_submit()
     post = Post(body=form.body.data,author=current_user._get_current_object()) #实例化
     db.session.add(post)
+    db.session.commit()
     return redirect(url_for('.index'))
+  #else:
+    #return render_template('404.html')  #没有权限，测试语句，直接返回404，权限问题还需要另外确定
   posts = Post.query.order_by(Post.timestamp.desc()).all()  #完整的博客文章列表传给 以时间戳进行降序排序
-  return render_template('index.html',form = form,posts = posts,current_user=current_user)
+  return render_template('index.html',form = form,posts = posts,currentuser=currentuser)
+

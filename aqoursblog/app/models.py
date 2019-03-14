@@ -57,7 +57,7 @@ class User(UserMixin,db.Model): #UserMixin作用详情见P82
     def __init__(self,**kwargs):
         super(User,self).__init__(**kwargs)
         if self.role is None:
-            if self.email ==current_app.config['FLASKY_ADMIN']: #如果验证邮箱是管理员的邮箱，则赋予用户全部的权力
+            if self.email == current_app.config['FLASKY_ADMIN']: #如果验证邮箱是管理员的邮箱，则赋予用户全部的权力
                 self.role = Role.query.filter_by(permissions=0xff).first()
             if self.role is None:
                 self.role = Role.query.filter_by(default=True).first()
@@ -66,9 +66,9 @@ class User(UserMixin,db.Model): #UserMixin作用详情见P82
     def password(self):
         raise AttributeError('not readable')
 
-"""     def generate_confirmation_token(self, expiration=3600): 
-        s = Serializer(current_app.config['SECRET_KEY'], expiration)
-        return s.dumps({'confirm': self.id}) """
+    # def generate_confirmation_token(self, expiration=3600): 
+    #     s = Serializer(current_app.config['SECRET_KEY'], expiration)
+    #     return s.dumps({'confirm': self.id}) 
 
     def gravatar(self,size=100,default='idention',rating='g'):
         defalut='idention'
@@ -87,21 +87,21 @@ class User(UserMixin,db.Model): #UserMixin作用详情见P82
     def verify_password(self,password): #判断输入密码是否一致，同一个字符串转化为的散列是一样的
         return check_password_hash(self.password_hash,password)
         
-"""     def confirm(self,token): #用户邮箱验证函数
-        s = Serializer(current_app.config['SECRET_KEY'])
-        try:
-            data = s.load(token)
-        except:
-            return False
-        if data.get('confirm') != self.id:
-            return False
-        self.confirmed = True
-        db.session.add(self)
-        return True  """
-    def can(sefl,permissions):
+#      def confirm(self,token): #用户邮箱验证函数
+#         s = Serializer(current_app.config['SECRET_KEY'])
+#         try:
+#             data = s.load(token)
+#         except:
+#             return False
+#         if data.get('confirm') != self.id:
+#             return False
+#         self.confirmed = True
+#         db.session.add(self)
+#         return True  
+    def can(self,permissions): #检查用户是否有指定的权限
         return self.role is not None and (self.role.permissions & permissions) == permissions
 
-    def is_administrator(self):
+    def is_administrator(self): #检查用户是否是管理员
         return self.can(Permission.ADMINISTER)
 
     def ping(self):
@@ -127,15 +127,16 @@ class AnonymousUser(AnonymousUserMixin): #匿名用户没有任何权限
     def can(self, permissions):
         return False
 
-    def is_administrator(self):
+    def is_administrator(self): #显然不是管理员
         return False
 
 class Post(db.Model): #文章的模型
     __tablename__ = 'posts'
     id = db.Column(db.Integer, primary_key=True)
+    #title = db.Column(db.String(256),index=True,default='NO TITLE')
     body = db.Column(db.Text)
     timestamp = db.Column(db.DateTime,index=True,default=datetime.utcnow)
-    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))  #多个文章对应一个作者，但是一个文章无法对应多个作者，作者是父表
     @staticmethod
     def generate_fake(count=100):
         from random import seed, randint
