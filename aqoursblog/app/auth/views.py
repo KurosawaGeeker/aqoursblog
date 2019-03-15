@@ -39,6 +39,8 @@ def register():
         return redirect(url_for('main.index'))
     return render_template('auth/register.html',form = form)
 
+
+
 """ #@auth.route('/confirm/<token>') #动态路由界面
 @login_required
 def confirm(token):

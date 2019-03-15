@@ -5,6 +5,7 @@ SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 FLASKY_MAIL_SUBJECT_PREFIX = '[Flasky]'
 FLASKY_MAIL_SENDER = 'Kurosawa Geeker <363876315@qq.com>'
 #FLASKY_ADMIN = os.environ.get('FLASKY_ADMIN')
+FLASK_POSTS_PER_PAGE = 10 #每个页面的博文最大数目
 FLASKY_ADMIN = '363876315@qq.com'
 MAIL_SERVER = 'smtp.qq.com'
 SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:YES@localhost/test11'

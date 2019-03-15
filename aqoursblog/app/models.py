@@ -7,6 +7,8 @@ from . import config
 from flask import current_app,request
 from datetime import datetime
 import hashlib
+from markdown import markdown
+import bleach 
 class Role(db.Model):
     __tablename__ = 'roles'
     id = db.Column(db.Integer,primary_key=True)
@@ -86,18 +88,6 @@ class User(UserMixin,db.Model): #UserMixin作用详情见P82
 
     def verify_password(self,password): #判断输入密码是否一致，同一个字符串转化为的散列是一样的
         return check_password_hash(self.password_hash,password)
-        
-#      def confirm(self,token): #用户邮箱验证函数
-#         s = Serializer(current_app.config['SECRET_KEY'])
-#         try:
-#             data = s.load(token)
-#         except:
-#             return False
-#         if data.get('confirm') != self.id:
-#             return False
-#         self.confirmed = True
-#         db.session.add(self)
-#         return True  
     def can(self,permissions): #检查用户是否有指定的权限
         return self.role is not None and (self.role.permissions & permissions) == permissions
 
@@ -114,8 +104,7 @@ class User(UserMixin,db.Model): #UserMixin作用详情见P82
         import forgery_py
         seed()
         for i in range(count):
-            u = User(email=forgery_py.internet.email_address(),cn=forgery_py.internet.user_name(True),password=forgery_py.lorem_ipsum.word(),mana=forgery_py.name.full_name(),
-location=forgery_py.address.city(),about_me=forgery_py.lorem_ipsum.sentence(),member_since=forgery_py.date.date(True))
+            u = User(email=forgery_py.internet.email_address(),cn=forgery_py.internet.user_name(True),password=forgery_py.lorem_ipsum.word(),mana=forgery_py.name.full_name(),location=forgery_py.address.city(),about_me=forgery_py.lorem_ipsum.sentence(),member_since=forgery_py.date.date(True))
             db.session.add(u)
             try:
                 db.session.commit()
@@ -123,6 +112,19 @@ location=forgery_py.address.city(),about_me=forgery_py.lorem_ipsum.sentence(),me
                 db.session.rollback()#回滚防止坏档
     def __repr__(self):
         return '<User %r>' % self.cn
+
+#      def confirm(self,token): #用户邮箱验证函数
+#         s = Serializer(current_app.config['SECRET_KEY'])
+#         try:
+#             data = s.load(token)
+#         except:
+#             return False
+#         if data.get('confirm') != self.id:
+#             return False
+#         self.confirmed = True
+#         db.session.add(self)
+#         return True  
+
 class AnonymousUser(AnonymousUserMixin): #匿名用户没有任何权限
     def can(self, permissions):
         return False
@@ -137,6 +139,7 @@ class Post(db.Model): #文章的模型
     body = db.Column(db.Text)
     timestamp = db.Column(db.DateTime,index=True,default=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))  #多个文章对应一个作者，但是一个文章无法对应多个作者，作者是父表
+    #body_html = db.Column(db.Text)
     @staticmethod
     def generate_fake(count=100):
         from random import seed, randint
@@ -149,6 +152,13 @@ class Post(db.Model): #文章的模型
             p = Post(body=forgery_py.lorem_ipsum.sentences(randint(1, 3)),timestamp=forgery_py.date.date(True),author=u)
             db.session.add(p)
             db.session.commit()
+    @staticmethod
+    def on_changed_body(target, value, oldvalue, initiator):
+        allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'code','em', 'i', 'li', 'ol', 'pre', 'strong', 'ul','h1', 'h2', 'h3', 'p']
+       #规定只允许使用的标签
+        target.body_html = bleach.linkify(bleach.clean(markdown(value, output_format='html'),tags=allowed_tags, strip=True))
+db.event.listen(Post.body,'set', Post.on_changed_body)
+
 
 login_manager.anonymous_user = AnonymousUser
 
